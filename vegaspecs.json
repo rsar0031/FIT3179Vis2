@@ -1,0 +1,102 @@
+{
+  "mapSpec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "width": 1100,
+    "height": 600,
+    "mark": { "type": "circle", "opacity": 0.65, "size": 35, "stroke": "white", "strokeWidth": 0.5 },
+    "projection": { "type": "mercator", "center": [144.931, -37.8135], "scale": 360500 },
+    "encoding": {
+      "longitude": { "field": "longitude", "type": "quantitative" },
+      "latitude": { "field": "latitude", "type": "quantitative" },
+      "color": { "field": "precinct", "type": "nominal", "scale": { "range": ["#1f77b4", "#ff7f0e", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8", "#ffbb78", "#98df8a", "#c5b0d5", "#c49c94", "#f7b6d2", "#c7c7c7", "#dbbd22", "#9edae5", "#393b79", "#e7969c"] }, "legend": { "title": "Precinct", "orient": "right", "labelLimit": 200, "columns": 1 } },
+      "tooltip": [
+        { "field": "common_name", "type": "nominal", "title": "Species" },
+        { "field": "precinct", "type": "nominal", "title": "Precinct" },
+        { "field": "year_planted", "type": "quantitative", "title": "Year" }
+      ]
+    }
+  },
+  "timelineSpec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "width": 450,
+    "height": 300,
+    "layer": [
+      {
+        "mark": { "type": "line", "point": true, "color": "#2d6a4f", "strokeWidth": 3 },
+        "encoding": {
+          "x": { "field": "year_planted", "type": "quantitative", "title": "Year", "axis": { "format": "d" } },
+          "y": { "field": "count", "type": "quantitative", "title": "Trees" },
+          "tooltip": [{ "field": "year_planted", "title": "Year" }, { "field": "count", "title": "Trees" }]
+        }
+      },
+      {
+        "mark": { "type": "line", "color": "#ff9f43", "strokeDash": [5, 5], "strokeWidth": 2 },
+        "transform": [{ "regression": "count", "on": "year_planted" }],
+        "encoding": {
+          "x": { "field": "year_planted", "type": "quantitative" },
+          "y": { "field": "count", "type": "quantitative" }
+        }
+      }
+    ]
+  },
+  "speciesSpec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "width": 450,
+    "height": 300,
+    "transform": [
+      { "aggregate": [{ "op": "count", "as": "count" }], "groupby": ["common_name"] },
+      { "window": [{ "op": "rank", "as": "rank" }], "sort": [{ "field": "count", "order": "descending" }] },
+      { "filter": "datum.rank <= 10" }
+    ],
+    "mark": { "type": "bar", "color": "#1a5f3a", "tooltip": true },
+    "encoding": {
+      "y": { "field": "common_name", "type": "nominal", "sort": "-x", "title": null, "axis": { "labelLimit": 200 } },
+      "x": { "field": "count", "type": "quantitative", "title": "Trees" },
+      "tooltip": [
+        { "field": "common_name", "type": "nominal", "title": "Species" },
+        { "field": "count", "type": "quantitative", "title": "Count" }
+      ]
+    }
+  },
+  "precinctSpec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "width": 450,
+    "height": 300,
+    "transform": [
+      { "aggregate": [{ "op": "count", "as": "count" }], "groupby": ["precinct"] },
+      { "window": [{ "op": "rank", "as": "rank" }], "sort": [{ "field": "count", "order": "descending" }] },
+      { "filter": "datum.rank <= 12" }
+    ],
+    "mark": { "type": "bar", "color": "#2d6a4f", "tooltip": true },
+    "encoding": {
+      "y": { "field": "precinct", "type": "nominal", "sort": "-x", "title": null, "axis": { "labelLimit": 200 } },
+      "x": { "field": "count", "type": "quantitative", "title": "Trees" },
+      "tooltip": [
+        { "field": "precinct", "type": "nominal", "title": "Precinct" },
+        { "field": "count", "type": "quantitative", "title": "Trees" }
+      ]
+    }
+  },
+  "ageSpec": {
+    "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+    "width": 410,
+    "height": 300,
+    "mark": { "type": "arc", "tooltip": true },
+    "encoding": {
+      "theta": { "field": "count", "type": "quantitative" },
+      "color": {
+        "field": "category",
+        "type": "nominal",
+        "scale": {
+          "domain": ["Young (0-15 years)", "Mature (16-35 years)", "Established (36-65 years)", "Historic (65+ years)"],
+          "range": ["#52b788", "#2d6a4f", "#1a5f3a", "#0d3b2e"]
+        },
+        "legend": { "title": "Age Category", "orient": "right", "titleFontSize": 13, "labelFontSize": 12 }
+      },
+      "tooltip": [
+        { "field": "category", "title": "Age" },
+        { "field": "count", "title": "Trees" }
+      ]
+    }
+  }
+}

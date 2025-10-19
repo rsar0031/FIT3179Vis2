@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melbourne's Urban Forest Story</title>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Melbourne's Urban Forest</h1>
+        <p class="subtitle">A journey through over a century of urban forestry</p>
+        
+        <p class="intro-text">Melbourne's street trees tell a rich story of changing attitudes toward urban nature. </p>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="precinctFilter">Filter by Precinct:</label>
+                <select id="precinctFilter"><option value="all">All Precincts</option></select>
+            </div>
+            <div class="filter-group">
+                <label for="speciesFilter">Filter by Species:</label>
+                <select id="speciesFilter"><option value="all">All Species</option></select>
+            </div>
+            <div class="filter-group year-filter-group">
+                <label for="yearFilter">Filter by Year Planted:</label>
+                <div class="year-filter-wrapper">
+                    <input type="range" id="yearFilter" min="1900" max="2025" value="1900">
+                    <div class="range-values">From <span id="yearValue">1900</span> onwards</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Tree Distribution Across Melbourne</h2>
+            <p>Clustering shows each suburb’s unique green makeup</p>
+            <div class="map-container"><div id="map"></div></div>
+        </div>
+        
+        <div class="grid">
+            <div class="grid-item">
+                <h2>Planting Trends Over Time</h2>
+                <p>Environmental awareness drives recent planting increases</p>
+                <div class="viz-container"><div id="timeline"></div></div>
+            </div>
+            
+            <div class="grid-item">
+                <h2>Trees by Precinct</h2>
+                <p>Neighborhoods maintain vastly different tree populations</p>
+                <div class="viz-container"><div id="precinct"></div></div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="grid-item">
+                <h2>Most Common Species</h2>
+                <p>Some top species dominate Melbourne's urban canopy</p>
+                <div class="viz-container"><div id="species"></div></div>
+            </div>
+            
+            <div class="grid-item">
+                <h2>Tree Age Distribution</h2>
+                <p>Age profile shows recent plantings alongside historic specimens</p>
+                <div class="viz-container"><div id="ageDistribution"></div></div>
+            </div>
+        </div>
+
+        <p class=class="intro-text">Melbourne's urban forest reflects changing values from Victorian heritage to modern sustainability.</p>
+
+        <div class="footer">
+            <p><strong>Student Name:</strong> Roshan Raj Saravanan | <strong>ID:</strong> 35659580 | <strong>Source:</strong> https://www.data.gov.au/data/dataset/trees-with-species-and-dimensions-urban-forest</p>
+        </div>
+    </div>
+
+    # AI assisted JavaScript for the website
+    <script>
+        const sharedConfig = {
+            font: 'Inter',
+            view: { stroke: null },
+            axis: {
+                labelFont: 'Inter',
+                titleFont: 'Inter',
+                labelFontSize: 11,
+                titleFontSize: 12,
+                labelColor: '#495057',
+                titleColor: '#2c3e50',
+                gridColor: '#e9ecef',
+                domainColor: '#dee2e6',
+                tickColor: '#dee2e6'
+            },
+            legend: {
+                labelFont: 'Inter',
+                titleFont: 'Inter',
+                labelFontSize: 11,
+                titleFontSize: 12,
+                labelColor: '#495057',
+                titleColor: '#2c3e50'
+            }
+        };
+
+        let data = [], filtered = [];
+        let vegaSpecs = {};
+
+        async function loadVegaSpecs() {
+            const response = await fetch('vegaspecs.json');
+            vegaSpecs = await response.json();
+        }
+
+        const specs = {
+            map: () => ({
+                ...vegaSpecs.mapSpec,
+                data: { values: filtered },
+                config: { ...sharedConfig, background: 'transparent' }
+            }),
+            
+            timeline: () => {
+                const timelineData = filtered.filter(d => d.year_planted >= 1990);
+                const timelineCounts = timelineData.reduce((acc, d) => {
+                    acc.set(d.year_planted, (acc.get(d.year_planted) || 0) + 1);
+                    return acc;
+                }, new Map());
+                const timelineArray = Array.from(timelineCounts, ([year, count]) => ({ year_planted: year, count }));
+                
+                return {
+                    ...vegaSpecs.timelineSpec,
+                    data: { values: timelineArray },
+                    config: sharedConfig
+                };
+            },
+            
+            species: () => ({
+                ...vegaSpecs.speciesSpec,
+                data: { values: filtered },
+                config: sharedConfig
+            }),
+            
+            precinct: () => ({
+                ...vegaSpecs.precinctSpec,
+                data: { values: filtered },
+                config: sharedConfig
+            }),
+            
+            age: () => {
+                const ageCounts = { 'Young (0-15 years)': 0, 'Mature (16-35 years)': 0, 'Established (36-65 years)': 0, 'Historic (65+ years)': 0 };
+                
+                filtered.forEach(d => {
+                    const category = d.year_planted >= 2010 ? 'Young (0-15 years)' :
+                                   d.year_planted >= 1990 ? 'Mature (16-35 years)' :
+                                   d.year_planted >= 1960 ? 'Established (36-65 years)' :
+                                   'Historic (65+ years)';
+                    ageCounts[category]++;
+                });
+                
+                const pieData = Object.entries(ageCounts).map(([category, count]) => ({ category, count }));
+                
+                return {
+                    ...vegaSpecs.ageSpec,
+                    data: { values: pieData },
+                    config: sharedConfig
+                };
+            }
+        };
+
+        function render() {
+            vegaEmbed('#map', specs.map(), { actions: false });
+            vegaEmbed('#timeline', specs.timeline(), { actions: false });
+            vegaEmbed('#species', specs.species(), { actions: false });
+            vegaEmbed('#precinct', specs.precinct(), { actions: false });
+            vegaEmbed('#ageDistribution', specs.age(), { actions: false });
+        }
+
+        function filter() {
+            const p = document.getElementById('precinctFilter').value;
+            const s = document.getElementById('speciesFilter').value;
+            const y = parseInt(document.getElementById('yearFilter').value);
+            
+            filtered = data.filter(d => 
+                (p === 'all' || d.precinct === p) &&
+                (s === 'all' || d.common_name === s) &&
+                d.year_planted >= y
+            );
+            render();
+        }
+
+        async function init() {
+            await loadVegaSpecs();
+            
+            Papa.parse('trees_sample.csv', {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    data = filtered = results.data;
+                    
+                    const precincts = [...new Set(data.map(d => d.precinct))].filter(Boolean).sort();
+                    const species = [...new Set(data.map(d => d.common_name))].filter(Boolean).sort();
+                    
+                    precincts.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = p;
+                        document.getElementById('precinctFilter').appendChild(opt);
+                    });
+                    
+                    species.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.textContent = s;
+                        document.getElementById('speciesFilter').appendChild(opt);
+                    });
+                    
+                    render();
+                    
+                    document.getElementById('precinctFilter').addEventListener('change', filter);
+                    document.getElementById('speciesFilter').addEventListener('change', filter);
+                    document.getElementById('yearFilter').addEventListener('input', (e) => {
+                        document.getElementById('yearValue').textContent = e.target.value;
+                        filter();
+                    });
+                }
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
